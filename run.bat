@@ -9,6 +9,5 @@ if not exist "space-station-14" (
     git -C ./space-station-14 pull
 )
 
-
 REM Do our renders and move them!
-./.venv/Scripts/python render_all_and_move.py
+%CD%/.venv/Scripts/python render_all_and_move.py
