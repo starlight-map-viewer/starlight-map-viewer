@@ -8,6 +8,7 @@ import subprocess
 import logging
 from logging.handlers import RotatingFileHandler
 import yaml
+from PIL import Image
 
 # Taken from Starlight Repo and modified by Pickra
 
@@ -172,7 +173,8 @@ def main() -> None:
 
                 for file_path in glob.glob(f'{map_file_path}/*.png'):
                     #
-                    shutil.move(file_path, map_dest_dir)
+                    img = Image.open(file_path)
+                    img.save(f"{map_dest_dir}/{os.path.basename(file_path)}", optimize=True)
 
                 # Get the json generated for the new map and add it to our manifest
                 with open(f'{map_file_path}/map.json') as f:
