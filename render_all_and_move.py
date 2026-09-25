@@ -47,7 +47,8 @@ logging.basicConfig(
 )
 
 
-def log(message):
+def log(message) -> None:
+    #
     logging.debug(message)
 
 def clean_solution() -> None:
@@ -63,12 +64,11 @@ def clean_solution() -> None:
 
 def build_solution() -> None:
     #
-    log('Cleansing older build')
+    log('Building out the renderer')
 
     cmd = [
         "dotnet",
         "build",
-        "--project",
         "Content.MapRenderer"
     ]
 
@@ -119,6 +119,9 @@ def main() -> None:
 
     # Cleanse our solution in case shit broke
     clean_solution()
+
+    # Building the solution so we can actually build!
+    build_solution()
 
     # Scrub the map output folder and the eventual home
     if os.path.exists(RENDER_OUTPUT_DIR):
