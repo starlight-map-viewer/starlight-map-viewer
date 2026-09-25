@@ -142,7 +142,9 @@ def main() -> None:
     for map_id in get_map_list():
         #
         last_updated = get_git_file_last_updated(map_id[9:])
-        needs_update = map_id not in manifest or last_updated > manifest[map_id]['_lastChecked']
+        needs_update = (map_id not in manifest
+                        or '_lastChecked' not in manifest[map_id]
+                        or last_updated > manifest[map_id]['_lastChecked'])
 
         log(f'Checking {map_id}... ' + ('Outdated, updating...' if needs_update else 'Up to date, skipping!'))
 
