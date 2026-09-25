@@ -20,7 +20,7 @@ STARLIGHT_REPO_DIR = "./space-station-14"
 RENDER_OUTPUT_DIR = f'{STARLIGHT_REPO_DIR}/Resources/MapImages'
 
 # The location to put the compiled maps in.
-FINAL_MAP_DIR = './public/maps'
+FINAL_MAP_DIR = './maps'
 
 # log file
 LOG_FILE = "./logs/render_log.txt"
@@ -85,9 +85,6 @@ def render_map(map_id: str) -> bool:
         "Content.MapRenderer",
         map_id
     ]
-
-    if (not PROJECT_BUILT):
-        PROJECT_BUILT = True
 
     if (VIEWER_JSON):
         cmd.append("--viewer")
@@ -169,6 +166,7 @@ def main() -> None:
                 # Clean out the old
                 if os.path.exists(map_dest_dir):
                     #
+                    print(map_dest_dir)
                     shutil.rmtree(map_dest_dir)
                     os.makedirs(map_dest_dir, exist_ok=True)
 

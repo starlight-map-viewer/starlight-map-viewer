@@ -11,3 +11,6 @@ if not exist "space-station-14" (
 
 REM Do our renders and move them!
 %CD%/.venv/Scripts/python render_all_and_move.py
+
+REM Commit any changes!
+%CD%/.venv/Scripts/python check_and_commit.py
