@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import logging
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 import yaml
 from PIL import Image
 
@@ -39,7 +40,7 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout),
         RotatingFileHandler(LOG_FILE, maxBytes=100000, backupCount=10)
     ],
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
     datefmt='%Y-%m-%dT%H:%M:%S'
 )
@@ -47,7 +48,7 @@ logging.basicConfig(
 
 def log(message) -> None:
     #
-    logging.debug(message)
+    logging.info(message)
 
 def clean_solution() -> None:
     #
@@ -169,14 +170,15 @@ def main() -> None:
                 # Clean out the old
                 if os.path.exists(map_dest_dir):
                     #
-                    print(map_dest_dir)
                     shutil.rmtree(map_dest_dir)
-                    os.makedirs(map_dest_dir, exist_ok=True)
+
+                # Ensure the folder is ready
+                os.makedirs(map_dest_dir, exist_ok=True)
 
                 for file_path in glob.glob(f'{map_file_path}/*.png'):
                     #
                     img = Image.open(file_path)
-                    img.save(f"{map_dest_dir}/{os.path.basename(file_path)}", optimize=True)
+                    img.save(f"{map_dest_dir}/{Path(file_path).stem}.webp", lossless=True, quality=100, method=6)
 
                 # Get the json generated for the new map and add it to our manifest
                 with open(f'{map_file_path}/map.json') as f:

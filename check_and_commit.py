@@ -22,7 +22,7 @@ def git_commit() -> bool:
         "git",
         "commit",
         "-m",
-        '"Automated commit to update maps"'
+        'Automated commit to update maps'
     ]
 
     try:
