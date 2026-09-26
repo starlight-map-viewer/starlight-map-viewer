@@ -9,6 +9,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 import yaml
+import custom_yaml_tags
 from PIL import Image
 
 # Taken from Starlight Repo and modified by Pickra
@@ -50,6 +51,7 @@ def log(message) -> None:
     #
     logging.info(message)
 
+
 def clean_solution() -> None:
     #
     log('Cleansing older renderer build!')
@@ -60,6 +62,7 @@ def clean_solution() -> None:
     ]
 
     subprocess.run(cmd, cwd=STARLIGHT_REPO_DIR, check=True)
+
 
 def build_solution() -> None:
     #
@@ -72,6 +75,7 @@ def build_solution() -> None:
     ]
 
     subprocess.run(cmd, cwd=STARLIGHT_REPO_DIR, check=True)
+
 
 def render_map(map_id: str) -> bool:
     #
@@ -102,25 +106,60 @@ def render_map(map_id: str) -> bool:
 
     return True
 
+
+map_metadata = {}
+
+def get_map_metadata(map_id: str) -> dict:
+    #
+    if not map_metadata:
+        #
+        for file_path in glob.glob(f'{STARLIGHT_REPO_DIR}/Resources/Prototypes/_Starlight/Maps/*.yml'):
+            #
+            with open(file_path, "r", encoding="UTF8") as f:
+                #
+                data = yaml.load(f, Loader=yaml.FullLoader)[0]
+
+                map_metadata[data['id']] = {
+                    'name':         data['mapName'],
+                    'path':         data['mapPath'],
+                    'totalPlayers': (
+                        data['minPlayers'] if 'minPlayers' in data else -1,
+                        data['maxPlayers'] if 'maxPlayers' in data else -1
+                    ),
+                }
+
+    return map_metadata[map_id] if map_id in map_metadata else None
+
+
 def get_map_list() -> list[str]:
     #
-    with open(f"./{STARLIGHT_REPO_DIR}/Resources/Prototypes/_Starlight/Maps/Pools/default.yml", "r", encoding="UTF8") as f:
-        return yaml.safe_load(f)[0]['maps']
+    if not map_metadata:
+        # Force populate the metadata data
+        get_map_metadata(None)
+
+    return map_metadata.keys()
+
 
 def get_git_file_last_updated(map_id: str) -> int:
     #
+    station_yaml = get_map_metadata(map_id)
+
+    if not station_yaml:
+        raise Exception(f'No map metadata for {map_id}, please investigate...')
+
     cmd = [
         "git",
         "log",
         "-1",
         '--format="%ct"',
         "--",
-        f"./Resources/Maps/_Starlight/Stations/{map_id}.yml"
+        f"Resources/{station_yaml['path']}"
     ]
 
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=STARLIGHT_REPO_DIR)
 
     return int(result.stdout.decode('UTF-8').strip().replace('"', ''))
+
 
 def main() -> None:
     #
@@ -142,7 +181,7 @@ def main() -> None:
 
     for map_id in get_map_list():
         #
-        last_updated = get_git_file_last_updated(map_id[9:])
+        last_updated = get_git_file_last_updated(map_id)
         needs_update = (map_id not in manifest
                         or '_lastChecked' not in manifest[map_id]
                         or last_updated > manifest[map_id]['_lastChecked'])
@@ -183,8 +222,20 @@ def main() -> None:
                 # Get the json generated for the new map and add it to our manifest
                 with open(f'{map_file_path}/map.json') as f:
                     #
-                    manifest[map_id] = json.load(f)
-                    manifest[map_id]['_lastChecked'] = int(time.time())
+                    metadata = get_map_metadata(map_id)
+
+                    map_manifest = json.load(f)
+                    map_manifest['_lastChecked'] = int(time.time())
+                    map_manifest['_totalPlayers'] = metadata['totalPlayers']
+
+                    # Remove unnecessary data
+                    if 'Attributions' in map_manifest and not map_manifest['Attributions']:
+                        del map_manifest['Attributions']
+
+                    if 'ParallaxLayers' in map_manifest and not map_manifest['ParallaxLayers']:
+                        del map_manifest['ParallaxLayers']
+
+                    manifest[map_id] = map_manifest
 
 
     with open(MANIFEST_DIR, 'w', encoding='UTF8') as f:
