@@ -140,31 +140,37 @@ def get_map_list() -> list[str]:
     return map_metadata.keys()
 
 
-def get_git_file_last_updated(map_id: str) -> int:
+def get_git_file_last_updated(file_path: str, cwd: str = STARLIGHT_REPO_DIR) -> int:
     #
-    station_yaml = get_map_metadata(map_id)
-
-    if not station_yaml:
-        raise Exception(f"No map metadata for {map_id}, please investigate...")
-
     cmd = [
         "git",
         "log",
         "-1",
         '--format="%ct"',
         "--",
-        f"Resources/{station_yaml['path']}"
+        file_path
     ]
 
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=STARLIGHT_REPO_DIR)
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
 
     return int(result.stdout.decode("UTF-8").strip().replace('"', ''))
 
 
+def get_map_last_updated(map_id: str) -> int:
+    #
+    station_yaml = get_map_metadata(map_id)
+
+    if not station_yaml:
+        raise Exception(f"No map metadata for {map_id}, please investigate...")
+
+    return get_git_file_last_updated(f"Resources{station_yaml['path']}")
+
+
 def main() -> None:
     #
-    MANIFEST_DIR = f"{FINAL_MAP_DIR}/manifest.json"
-    manifest = {}
+    MANIFEST_DIR        = f"{FINAL_MAP_DIR}/manifest.json"
+    manifest            = {}
+    manifest_updated    = False
 
     if os.path.exists(MANIFEST_DIR):
         with open(MANIFEST_DIR, "r", encoding="UTF8") as f:
@@ -181,7 +187,7 @@ def main() -> None:
 
     for map_id in get_map_list():
         #
-        last_updated = get_git_file_last_updated(map_id)
+        last_updated = get_map_last_updated(map_id)
         needs_update = (map_id not in manifest
                         or "_lastChecked" not in manifest[map_id]
                         or last_updated > manifest[map_id]["_lastChecked"])
@@ -237,20 +243,29 @@ def main() -> None:
 
                     manifest[map_id] = map_manifest
 
+                    manifest_updated = True
 
-    with open(MANIFEST_DIR, "w", encoding="UTF8") as f:
-        # Compress and save!
-        manifest["_lastChecked"] = int(time.time())
-
-        json.dump(manifest, f, separators=(",", ":"))
+    if manifest_updated:
+        with open(MANIFEST_DIR, "w", encoding="UTF8") as f:
+            # Compress and save!
+            json.dump(manifest, f, separators=(",", ":"))
 
     # Recompile the pool list regardless if it's been updated.
-    with open(f"./{STARLIGHT_REPO_DIR}/Resources/Prototypes/_Starlight/Maps/Pools/default.yml", "r", encoding="UTF8") as rf:
+    POOL_FILE_DIR = "Resources/Prototypes/_Starlight/Maps/Pools/default.yml"
+
+    with open(f"{STARLIGHT_REPO_DIR}/{POOL_FILE_DIR}", "r", encoding="UTF8") as rf:
         with open(f"{FINAL_MAP_DIR}/map_pool.json", "w", encoding="UTF8") as wf:
             map_pool = yaml.safe_load(rf)[0]["maps"]
             map_pool.sort()
 
             json.dump(map_pool, wf, separators=(",", ":"))
+
+    # Now update our own map check metadata
+    with open(f"{FINAL_MAP_DIR}/map_check.json", "w", encoding="UTF8") as f:
+        json.dump({
+            "lastChecked": int(time.time()),
+            "lastPoolUpdate": get_git_file_last_updated(POOL_FILE_DIR),
+        }, f, separators=(",", ":"))
 
 
 if __name__ == "__main__":
