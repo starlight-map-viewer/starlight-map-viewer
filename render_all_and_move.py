@@ -19,11 +19,11 @@ from PIL import Image
 # SS14 Starlight repo
 STARLIGHT_REPO_DIR = "./space-station-14"
 
-#
-RENDER_OUTPUT_DIR = f'{STARLIGHT_REPO_DIR}/Resources/MapImages'
+# Where the MapImages will be outputted by the renderer
+RENDER_OUTPUT_DIR = f"{STARLIGHT_REPO_DIR}/Resources/MapImages"
 
 # The location to put the compiled maps in.
-FINAL_MAP_DIR = './maps'
+FINAL_MAP_DIR = "./maps"
 
 # log file
 LOG_FILE = "./logs/render_log.txt"
@@ -43,7 +43,7 @@ logging.basicConfig(
     ],
     level=logging.INFO,
     format="[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s",
-    datefmt='%Y-%m-%dT%H:%M:%S'
+    datefmt="%Y-%m-%dT%H:%M:%S"
 )
 
 
@@ -54,7 +54,7 @@ def log(message) -> None:
 
 def clean_solution() -> None:
     #
-    log('Cleansing older renderer build!')
+    log("Cleansing older renderer build!")
 
     cmd = [
         "dotnet",
@@ -66,7 +66,7 @@ def clean_solution() -> None:
 
 def build_solution() -> None:
     #
-    log('Building out the renderer!')
+    log("Building out the renderer!")
 
     cmd = [
         "dotnet",
@@ -113,18 +113,18 @@ def get_map_metadata(map_id: str) -> dict:
     #
     if not map_metadata:
         #
-        for file_path in glob.glob(f'{STARLIGHT_REPO_DIR}/Resources/Prototypes/_Starlight/Maps/*.yml'):
+        for file_path in glob.glob(f"{STARLIGHT_REPO_DIR}/Resources/Prototypes/_Starlight/Maps/*.yml"):
             #
             with open(file_path, "r", encoding="UTF8") as f:
                 #
                 data = yaml.load(f, Loader=yaml.FullLoader)[0]
 
-                map_metadata[data['id']] = {
-                    'name':         data['mapName'],
-                    'path':         data['mapPath'],
-                    'totalPlayers': (
-                        data['minPlayers'] if 'minPlayers' in data else -1,
-                        data['maxPlayers'] if 'maxPlayers' in data else -1
+                map_metadata[data["id"]] = {
+                    "name":         data["mapName"],
+                    "path":         data["mapPath"],
+                    "totalPlayers": (
+                        data["minPlayers"] if "minPlayers" in data else -1,
+                        data["maxPlayers"] if "maxPlayers" in data else -1
                     ),
                 }
 
@@ -145,7 +145,7 @@ def get_git_file_last_updated(map_id: str) -> int:
     station_yaml = get_map_metadata(map_id)
 
     if not station_yaml:
-        raise Exception(f'No map metadata for {map_id}, please investigate...')
+        raise Exception(f"No map metadata for {map_id}, please investigate...")
 
     cmd = [
         "git",
@@ -158,16 +158,16 @@ def get_git_file_last_updated(map_id: str) -> int:
 
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=STARLIGHT_REPO_DIR)
 
-    return int(result.stdout.decode('UTF-8').strip().replace('"', ''))
+    return int(result.stdout.decode("UTF-8").strip().replace('"', ''))
 
 
 def main() -> None:
     #
-    MANIFEST_DIR = f'{FINAL_MAP_DIR}/manifest.json'
+    MANIFEST_DIR = f"{FINAL_MAP_DIR}/manifest.json"
     manifest = {}
 
     if os.path.exists(MANIFEST_DIR):
-        with open(MANIFEST_DIR, 'r', encoding='UTF8') as f:
+        with open(MANIFEST_DIR, "r", encoding="UTF8") as f:
             # Compress and save!
             manifest = json.load(f)
 
@@ -183,14 +183,14 @@ def main() -> None:
         #
         last_updated = get_git_file_last_updated(map_id)
         needs_update = (map_id not in manifest
-                        or '_lastChecked' not in manifest[map_id]
-                        or last_updated > manifest[map_id]['_lastChecked'])
+                        or "_lastChecked" not in manifest[map_id]
+                        or last_updated > manifest[map_id]["_lastChecked"])
 
-        log(f'Checking {map_id}... ' + ('Outdated, updating...' if needs_update else 'Up to date, skipping!'))
+        log(f"Checking {map_id}... " + ("Outdated, updating..." if needs_update else "Up to date, skipping!"))
 
         if (needs_update):
             # Does it not exist or has been updated since last check? Then update it!
-            map_file_path = f'{RENDER_OUTPUT_DIR}/{map_id}'
+            map_file_path = f"{RENDER_OUTPUT_DIR}/{map_id}"
 
             # Clean and rebuild our project to ensure up-to-date stuff
             if not project_built:
@@ -214,35 +214,43 @@ def main() -> None:
                 # Ensure the folder is ready
                 os.makedirs(map_dest_dir, exist_ok=True)
 
-                for file_path in glob.glob(f'{map_file_path}/*.png'):
+                for file_path in glob.glob(f"{map_file_path}/*.png"):
                     #
                     img = Image.open(file_path)
                     img.save(f"{map_dest_dir}/{Path(file_path).stem}.webp", lossless=True, quality=100, method=6)
 
                 # Get the json generated for the new map and add it to our manifest
-                with open(f'{map_file_path}/map.json') as f:
+                with open(f"{map_file_path}/map.json") as f:
                     #
                     metadata = get_map_metadata(map_id)
 
                     map_manifest = json.load(f)
-                    map_manifest['_lastChecked'] = int(time.time())
-                    map_manifest['_totalPlayers'] = metadata['totalPlayers']
+                    map_manifest["_lastChecked"] = int(time.time())
+                    map_manifest["_totalPlayers"] = metadata["totalPlayers"]
 
                     # Remove unnecessary data
-                    if 'Attributions' in map_manifest and not map_manifest['Attributions']:
-                        del map_manifest['Attributions']
+                    if "Attributions" in map_manifest and not map_manifest["Attributions"]:
+                        del map_manifest["Attributions"]
 
-                    if 'ParallaxLayers' in map_manifest and not map_manifest['ParallaxLayers']:
-                        del map_manifest['ParallaxLayers']
+                    if "ParallaxLayers" in map_manifest and not map_manifest["ParallaxLayers"]:
+                        del map_manifest["ParallaxLayers"]
 
                     manifest[map_id] = map_manifest
 
 
-    with open(MANIFEST_DIR, 'w', encoding='UTF8') as f:
+    with open(MANIFEST_DIR, "w", encoding="UTF8") as f:
         # Compress and save!
-        manifest['_lastChecked'] = int(time.time())
+        manifest["_lastChecked"] = int(time.time())
 
-        json.dump(manifest, f, separators=(',', ':'))
+        json.dump(manifest, f, separators=(",", ":"))
+
+    # Recompile the pool list regardless if it's been updated.
+    with open(f"./{STARLIGHT_REPO_DIR}/Resources/Prototypes/_Starlight/Maps/Pools/default.yml", "r", encoding="UTF8") as rf:
+        with open(f"{FINAL_MAP_DIR}/map_pool.json", "w", encoding="UTF8") as wf:
+            map_pool = yaml.safe_load(rf)[0]["maps"]
+            map_pool.sort()
+
+            json.dump(map_pool, wf, separators=(",", ":"))
 
 
 if __name__ == "__main__":
